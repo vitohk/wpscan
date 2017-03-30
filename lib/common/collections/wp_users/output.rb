@@ -1,5 +1,5 @@
 # encoding: UTF-8
-
+require_relative '../../../wpscan/json_report'
 class WpUsers < WpItems
   module Output
 
@@ -23,6 +23,7 @@ class WpUsers < WpItems
       table = Terminal::Table.new(headings: headings,
                                   rows: rows,
                                   style: { margin_left: options[:margin_left] || '' }).to_s
+      Report.add_vuln 'Passwords bruted forced!!',rows.to_s().gsub('nil','""')
       # variable needed for output
       puts table
     end
