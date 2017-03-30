@@ -528,15 +528,15 @@ def main
     puts critical('-) If you see SSL/TLS related error messages you have to fix your local TLS setup')
     puts critical('-) Windows is still not supported')
     exit(1)
-  # rescue => e
-  #   puts
-  #   puts critical(e.message)
+  rescue => e
+    puts
+    puts critical(e.message)
 
-  #   if wpscan_options && wpscan_options.verbose
-  #     puts critical('Trace:')
-  #     puts critical(e.backtrace.join("\n"))
-  #   end
-  #   exit(1)
+    if wpscan_options && wpscan_options.verbose
+      puts critical('Trace:')
+      puts critical(e.backtrace.join("\n"))
+    end
+    exit(1)
   ensure
     # Ensure a clean abort of Hydra
     # See https://github.com/wpscanteam/wpscan/issues/461#issuecomment-42735615
