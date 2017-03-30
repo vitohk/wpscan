@@ -12,7 +12,7 @@ MODELS_LIB_DIR       = File.join(COMMON_LIB_DIR, 'models')
 COLLECTIONS_LIB_DIR  = File.join(COMMON_LIB_DIR, 'collections')
 
 LOG_FILE             = File.join(ROOT_DIR, 'log.txt')
-
+JSON_REPORT_FILE     = File.join(ROOT_DIR,'report.json')
 # Plugins directories
 COMMON_PLUGINS_DIR   = File.join(COMMON_LIB_DIR, 'plugins')
 WPSCAN_PLUGINS_DIR   = File.join(WPSCAN_LIB_DIR, 'plugins') # Not used ATM
@@ -273,4 +273,11 @@ end
 
 def url_encode(str)
   CGI.escape(str).gsub("+", "%20")
+end
+
+def write_json_report(report)
+  return unless report
+  File.open(JSON_REPORT_FILE,"w") do |f|
+  f.write(report.to_json)
+  end
 end

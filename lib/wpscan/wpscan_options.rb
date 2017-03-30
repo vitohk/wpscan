@@ -47,7 +47,8 @@ class WpscanOptions
     :disable_accept_header,
     :disable_referer,
     :cache_dir,
-    :disable_tls_checks
+    :disable_tls_checks,
+    :json_output
   ]
 
   attr_accessor *ACCESSOR_OPTIONS
@@ -161,6 +162,10 @@ class WpscanOptions
     Typhoeus::Config.verbose = debug_output
   end
 
+  def json_output=(json_output)
+    @json_output = json_output
+  end
+
   def has_options?
     !to_h.empty?
   end
@@ -168,6 +173,8 @@ class WpscanOptions
   def random_agent=(useless)
     @user_agent = get_random_user_agent
   end
+
+  
 
   # return Hash
   def to_h
@@ -187,8 +194,8 @@ class WpscanOptions
   # return WpscanOptions
   def self.load_from_arguments
     wpscan_options = WpscanOptions.new
-
-    if ARGV.length > 0
+ 
+     if ARGV.length > 0
       WpscanOptions.get_opt_long.each do |opt, arg|
         wpscan_options.set_option_from_cli(opt, arg)
       end
@@ -293,6 +300,7 @@ class WpscanOptions
       ['--disable-referer', GetoptLong::NO_ARGUMENT],
       ['--cache-dir', GetoptLong::REQUIRED_ARGUMENT],
       ['--disable-tls-checks', GetoptLong::NO_ARGUMENT],
+      ['--json_output', GetoptLong::NO_ARGUMENT],
     )
   end
 

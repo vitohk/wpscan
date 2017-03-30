@@ -90,6 +90,7 @@ def help
   puts '--batch                             Never ask for user input, use the default behaviour.'
   puts '--no-color                          Do not use colors in the output.'
   puts '--log                               Creates a log.txt file with WPScan\'s output.'
+  #TODO: put help for json report
   puts '--no-banner                         Prevents the WPScan banner from being displayed.'
   puts '--disable-accept-header             Prevents WPScan sending the Accept HTTP header.'
   puts '--disable-referer                   Prevents setting the Referer header.'
