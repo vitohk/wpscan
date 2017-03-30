@@ -1,4 +1,5 @@
 module Report
+  @@report = nil
   def self.report=(report)
     @@report = report
   end
