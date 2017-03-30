@@ -1,3 +1,36 @@
+module Report
+  def self.report=(report)
+    @@report = report
+  end
+
+  def self.report
+    @@report
+  end
+
+  def self.add_vuln(title, desc = '', fixed_in = '')
+    return unless report
+    vuln_item = VulnItem.new title, desc, fixed_in
+    JsonReport.add(vuln_item, report)
+  end
+
+  def self.add_info(title, desc = '')
+    return unless report
+    info_item = InfoItem.new title, desc
+    JsonReport.add(info_item, report)
+  end
+
+  def self.add_error(title, desc = '')
+    return unless report
+    error_item = ErrorItem.new title, desc
+    JsonReport.add(error_item, report)
+  end
+
+  def self.add_leak(title, desc = '')
+    return unless report
+    leak_item = LeakItem.new title, desc
+    JsonReport.add(leak_item, report)
+  end
+end
 class JsonReport
   def initialize
     @infos = []
@@ -6,8 +39,7 @@ class JsonReport
     @errors = []
   end
   attr_reader :infos, :leaks, :vulns, :errors
-  def self.add_if_needed(item,json_report)
-    return unless json_report
+  def self.add(item, json_report)
     case item.item_type
     when :info
       json_report.infos << item
@@ -18,6 +50,11 @@ class JsonReport
     when :error
       json_report.errors << item
     end
+  end
+
+  def self.add_if_needed(item, json_report)
+    return unless json_report
+    add(item, json_report)
   end
 
   def to_json(*a)

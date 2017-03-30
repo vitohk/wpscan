@@ -3,7 +3,7 @@
 class WpVersion < WpItem
   module Output
 
-    def output(verbose = false, json_report = nil)
+    def output(verbose = false)
       metadata = self.metadata(self.number)
 
       puts
@@ -14,18 +14,15 @@ class WpVersion < WpItem
       else
         puts info("WordPress version #{self.number} #{"(Released on #{metadata[:release_date]}) identified from #{self.found_from}" if metadata[:release_date]}")
       end
-      infoItem = InfoItem.new "WordPress version #{self.number} #{"(Released on #{metadata[:release_date]}) identified from #{self.found_from}" if metadata[:release_date]}" 
-      
-      JsonReport.add_if_needed(infoItem, json_report)
+      Report.add_info "WordPress version #{self.number} #{"(Released on #{metadata[:release_date]}) identified from #{self.found_from}" if metadata[:release_date]}" 
       vulnerabilities = self.vulnerabilities
-
       unless vulnerabilities.empty?
         if vulnerabilities.size == 1
            puts critical("#{vulnerabilities.size} vulnerability identified from the version number")
         else
            puts critical("#{vulnerabilities.size} vulnerabilities identified from the version number")
         end
-        vulnerabilities.output false, json_report
+        vulnerabilities.output
       end
     end
 

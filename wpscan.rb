@@ -17,7 +17,8 @@ def main
     
     #variable for report generation in json
     if wpscan_options.json_output
-       json_report = JsonReport.new
+      json_report = JsonReport.new
+      Report.report = json_report
     end
     
     banner() unless wpscan_options.no_banner # called after $log set
@@ -62,15 +63,13 @@ def main
       if (input = Readline.readline) =~ /^y/i
         wpscan_options.update = true
       elsif input =~ /^a/i
-        error_item = ErrorItem.new 'Scan aborted'
-        JsonReport.add_if_needed(error_item,json_report)
+        Report.add_error 'Scan aborted'
         write_json_report json_report
         puts 'Scan aborted'
         exit(1)
       else
         if missing_db_file?
-          error_item = ErrorItem.new 'You can not run a scan without any databases. Extract the data.zip file.'
-          JsonReport.add_if_needed(error_item,json_report)
+          Report.add_error 'You can not run a scan without any databases. Extract the data.zip file.'
           write_json_report json_report
           puts critical('You can not run a scan without any databases. Extract the data.zip file.')
           exit(1)
@@ -87,28 +86,24 @@ def main
     end
 
     unless wpscan_options.url
-      error_item = ErrorItem.new 'The URL is mandatory, please supply it with --url or -u'
-      JsonReport.add_if_needed(error_item,json_report)
+      Report.add_error 'The URL is mandatory, please supply it with --url or -u'
       raise 'The URL is mandatory, please supply it with --url or -u'
     end
 
     wp_target = WpTarget.new(wpscan_options.url, wpscan_options.to_h)
-     if wp_target.wordpress_hosted?
-      error_item = ErrorItem.new 'We do not support scanning *.wordpress.com hosted blogs'
-      JsonReport.add_if_needed(error_item,json_report)
+    if wp_target.wordpress_hosted?
+      Report.add_error 'We do not support scanning *.wordpress.com hosted blogs'
       raise 'We do not support scanning *.wordpress.com hosted blogs'
     end
 
     if wp_target.ssl_error?
-      error_item = ErrorItem.new "The target site returned an SSL/TLS error. You can try again using the --disable-tls-checks option.\nError: #{wp_target.get_root_path_return_code}\nSee here for a detailed explanation of the error: http://www.rubydoc.info/github/typhoeus/ethon/Ethon/Easy:return_code"
-      JsonReport.add_if_needed(error_item,json_report)
+      Report.add_error "The target site returned an SSL/TLS error. You can try again using the --disable-tls-checks option.\nError: #{wp_target.get_root_path_return_code}\nSee here for a detailed explanation of the error: http://www.rubydoc.info/github/typhoeus/ethon/Ethon/Easy:return_code"
       raise "The target site returned an SSL/TLS error. You can try again using the --disable-tls-checks option.\nError: #{wp_target.get_root_path_return_code}\nSee here for a detailed explanation of the error: http://www.rubydoc.info/github/typhoeus/ethon/Ethon/Easy:return_code"
     end
 
     # Remote website up?
     unless wp_target.online?
-      error_item = ErrorItem.new "The WordPress URL supplied '#{wp_target.uri}' seems to be down. Maybe the site is blocking wpscan so you can try the --random-agent parameter."
-      JsonReport.add_if_needed(error_item,json_report)
+      Report.add_error "The WordPress URL supplied '#{wp_target.uri}' seems to be down. Maybe the site is blocking wpscan so you can try the --random-agent parameter."
       raise "The WordPress URL supplied '#{wp_target.uri}' seems to be down. Maybe the site is blocking wpscan so you can try the --random-agent parameter."
     end
 
@@ -116,8 +111,7 @@ def main
       proxy_response = Browser.get(wp_target.url)
 
       unless WpTarget::valid_response_codes.include?(proxy_response.code)
-        error_item = ErrorItem.new "Proxy Error :\r\nResponse Code: #{proxy_response.code}\r\nResponse Headers: #{proxy_response.headers}"
-        JsonReport.add_if_needed(error_item,json_report)
+        Report.add_error "Proxy Error :\r\nResponse Code: #{proxy_response.code}\r\nResponse Headers: #{proxy_response.headers}"
         raise "Proxy Error :\r\nResponse Code: #{proxy_response.code}\r\nResponse Headers: #{proxy_response.headers}"
       end
     end
@@ -126,8 +120,7 @@ def main
     if (redirection = wp_target.redirection)
       if redirection =~ /\/wp-admin\/install\.php$/
          puts critical('The Website is not fully configured and currently in install mode. Call it to create a new admin user.')
-         error_item = ErrorItem.new 'The Website is not fully configured and currently in install mode. Call it to create a new admin user.'
-         JsonReport.add_if_needed(error_item,json_report)
+         Report.add_info 'The Website is not fully configured and currently in install mode. Call it to create a new admin user.'
       else
         if wpscan_options.follow_redirection
           puts "Following redirection #{redirection}"
@@ -142,8 +135,7 @@ def main
           else
             if input =~ /^a/i
               puts 'Scan aborted'
-              error_item = ErrorItem.new 'Scan aborted'
-              JsonReport.add_if_needed(error_item,json_report)
+              Report.add_error 'Scan aborted'
               exit(1)
             end
           end
@@ -152,8 +144,7 @@ def main
     end
 
     if wp_target.has_basic_auth? && wpscan_options.basic_auth.nil?
-      error_item = ErrorItem.new 'Basic authentication is required, please provide it with --basic-auth <login:password>'
-      JsonReport.add_if_needed(error_item,json_report)
+      Report.add_error 'Basic authentication is required, please provide it with --basic-auth <login:password>'
       raise 'Basic authentication is required, please provide it with --basic-auth <login:password>'
     end
 
@@ -161,8 +152,7 @@ def main
     unless wpscan_options.basic_auth.nil?
       res = Browser.get_and_follow_location(wp_target.url)
       if res && res.code == 401
-        error_item = ErrorItem.new "Invalid credentials supplied"
-        JsonReport.add_if_needed(error_item,json_report)
+        Report.add_error "Invalid credentials supplied"
         raise 'Invalid credentials supplied'
       end
     end
@@ -170,15 +160,13 @@ def main
     # Remote website is wordpress?
     unless wpscan_options.force
       unless wp_target.wordpress?
-        error_item = ErrorItem.new "The remote website is up, but does not seem to be running WordPress."
-        JsonReport.add_if_needed(error_item,json_report)
+        Report.add_error "The remote website is up, but does not seem to be running WordPress."
         raise 'The remote website is up, but does not seem to be running WordPress.'
       end
     end
 
     unless wp_target.wp_content_dir
-      error_item = ErrorItem.new 'The wp_content_dir has not been found, please supply it with --wp-content-dir'
-      JsonReport.add_if_needed(error_item,json_report)
+      Report.add_error 'The wp_content_dir has not been found, please supply it with --wp-content-dir'
       raise 'The wp_content_dir has not been found, please supply it with --wp-content-dir'
     end
 
@@ -200,41 +188,41 @@ def main
 
     if wp_target.has_robots?
       puts info("robots.txt available under: '#{wp_target.robots_url}'")
-      info_item = InfoItem.new "robots.txt available under: '#{wp_target.robots_url}'"
-      JsonReport.add_if_needed(info_item,json_report)
+      Report.add_info "robots.txt available under: '#{wp_target.robots_url}'"
+
       wp_target.parse_robots_txt.each do |dir|
-        info_item = InfoItem.new "Interesting entry from robots.txt: #{dir}"
-        JsonReport.add_if_needed(info_item,json_report)
+        Report.add_info "Interesting entry from robots.txt: #{dir}"
+  
         puts info("Interesting entry from robots.txt: #{dir}")
       end
     end
 
     if wp_target.has_readme?
-      leak_item = LeakItem.new "The WordPress '#{wp_target.readme_url}' file exists exposing a version number"
-      JsonReport.add_if_needed(leak_item,json_report)
+      Report.add_leak "The WordPress '#{wp_target.readme_url}' file exists exposing a version number"
+      
       puts warning("The WordPress '#{wp_target.readme_url}' file exists exposing a version number")
     end
 
     if wp_target.has_full_path_disclosure?
-      leak_item = LeakItem.new "Full Path Disclosure (FPD) in '#{wp_target.full_path_disclosure_url}': #{wp_target.full_path_disclosure_data}"
-      JsonReport.add_if_needed(leak_item,json_report)
+      Report.add_leak "Full Path Disclosure (FPD) in '#{wp_target.full_path_disclosure_url}': #{wp_target.full_path_disclosure_data}"
+      
       puts warning("Full Path Disclosure (FPD) in '#{wp_target.full_path_disclosure_url}': #{wp_target.full_path_disclosure_data}")
     end
 
     if wp_target.has_debug_log?
-      leak_item = LeakItem.new "Debug log file found: #{wp_target.debug_log_url}"
-      JsonReport.add_if_needed(leak_item,json_report)
+      Report.add_leak "Debug log file found: #{wp_target.debug_log_url}"
+      
       puts critical("Debug log file found: #{wp_target.debug_log_url}")
     end
     wp_target.config_backup.each do |file_url|
-      leak_item = LeakItem.new "A wp-config.php backup file has been found in: '#{file_url}'"
-      JsonReport.add_if_needed(leak_item,json_report)
+      Report.add_leak "A wp-config.php backup file has been found in: '#{file_url}'"
+      
       puts critical("A wp-config.php backup file has been found in: '#{file_url}'")
     end
 
     if wp_target.search_replace_db_2_exists?
-      leak_item = LeakItem.new "searchreplacedb2.php has been found in: '#{wp_target.search_replace_db_2_url}'"
-      JsonReport.add_if_needed(leak_item,json_report)
+      Report.add_leak "searchreplacedb2.php has been found in: '#{wp_target.search_replace_db_2_url}'"
+      
       puts critical("searchreplacedb2.php has been found in: '#{wp_target.search_replace_db_2_url}'")
     end
 
@@ -243,50 +231,48 @@ def main
 
       if header[1].class == Array
         header[1].each do |value|
-          leak_item = LeakItem.new "Interesting header: #{header[0]}: #{value}"
-          JsonReport.add_if_needed(leak_item,json_report)
+          Report.add_leak "Interesting header: #{header[0]}: #{value}"
+          
           puts output + "#{header[0]}: #{value}"
         end
       else
-        leak_item = LeakItem.new "Interesting header: #{header[0]}: #{header[1]}"
-        JsonReport.add_if_needed(leak_item,json_report)
+        Report.add_leak "Interesting header: #{header[0]}: #{header[1]}"
+        
         puts output + "#{header[0]}: #{header[1]}"
       end
     end
 
     if wp_target.multisite?
-      info_item = InfoItem.new 'This site seems to be a multisite (http://codex.wordpress.org/Glossary#Multisite)'
-      JsonReport.add_if_needed(InfoItem,json_report)
+      Report.add_info 'This site seems to be a multisite (http://codex.wordpress.org/Glossary#Multisite)'
       puts info('This site seems to be a multisite (http://codex.wordpress.org/Glossary#Multisite)')
     end
 
     if wp_target.has_must_use_plugins?
-      info_item = InfoItem.new "This site has 'Must Use Plugins' (http://codex.wordpress.org/Must_Use_Plugins)"
-      JsonReport.add_if_needed(info_item,json_report)
+      Report.add_info "This site has 'Must Use Plugins' (http://codex.wordpress.org/Must_Use_Plugins)"
+
       puts info("This site has 'Must Use Plugins' (http://codex.wordpress.org/Must_Use_Plugins)")
     end
 
     if wp_target.registration_enabled?
-      leak_item = LeakItem.new "Registration is enabled: #{wp_target.registration_url}"
-      JsonReport.add_if_needed(leak_item,json_report)
+      Report.add_leak "Registration is enabled: #{wp_target.registration_url}"
+      
       puts warning("Registration is enabled: #{wp_target.registration_url}")
     end
 
     if wp_target.has_xml_rpc?
-      info_item = InfoItem.new "XML-RPC Interface available under: #{wp_target.xml_rpc_url}"
-      JsonReport.add_if_needed(info_item,json_report)
+      Report.add_info "XML-RPC Interface available under: #{wp_target.xml_rpc_url}"
       puts info("XML-RPC Interface available under: #{wp_target.xml_rpc_url}")
     end
 
     if wp_target.upload_directory_listing_enabled?
-      leak_item = LeakItem.new "Upload directory has directory listing enabled: #{wp_target.upload_dir_url}"
-      JsonReport.add_if_needed(leak_item,json_report)
+      Report.add_leak "Upload directory has directory listing enabled: #{wp_target.upload_dir_url}"
+      
       puts warning("Upload directory has directory listing enabled: #{wp_target.upload_dir_url}")
     end
 
     if wp_target.include_directory_listing_enabled?
-      leak_item = LeakItem.new "Includes directory has directory listing enabled: #{wp_target.includes_dir_url}"
-      JsonReport.add_if_needed(leak_item,json_report)
+      Report.add_leak "Includes directory has directory listing enabled: #{wp_target.includes_dir_url}"
+      
       puts warning("Includes directory has directory listing enabled: #{wp_target.includes_dir_url}")
     end
 
@@ -296,21 +282,21 @@ def main
     }
 
     if wp_version = wp_target.version(WP_VERSIONS_FILE)
-      wp_version.output(wpscan_options.verbose, json_report)
+      wp_version.output(wpscan_options.verbose)
     else
       puts
-      info_item = InfoItem.new 'WordPress version can not be detected'
-      JsonReport.add_if_needed(info_item,json_report)
+      Report.add_info 'WordPress version can not be detected'
+
       puts notice('WordPress version can not be detected')
     end
 
     if wp_theme = wp_target.theme
       puts
       # Theme version is handled in #to_s
-      info_item = InfoItem.new "WordPress theme in use: #{wp_theme}"
-      JsonReport.add_if_needed(info_item,json_report)
+      Report.add_info "WordPress theme in use: #{wp_theme}"
+
       puts info("WordPress theme in use: #{wp_theme}")
-      wp_theme.output(wpscan_options.verbose, json_report)
+      wp_theme.output(wpscan_options.verbose)
 
       # Check for parent Themes
       parent_theme_count = 0
@@ -318,8 +304,8 @@ def main
         parent_theme_count += 1
 
         parent = wp_theme.get_parent_theme
-        info_item = InfoItem.new "Detected parent theme: #{parent}"
-        JsonReport.add_if_needed(info_item,json_report)
+        Report.add_info "Detected parent theme: #{parent}"
+  
         puts
         puts info("Detected parent theme: #{parent}")
         parent.output(wpscan_options.verbose)
@@ -339,7 +325,7 @@ def main
         else
           puts " | #{wp_plugins.size} plugins found:"
         end
-        wp_plugins.output(wpscan_options.verbose, json_report)
+        wp_plugins.output(wpscan_options.verbose)
       else
         puts info('No plugins found')
       end
@@ -375,7 +361,7 @@ def main
       if !wp_plugins.empty?
         puts info("We found #{wp_plugins.size} plugins:")
 
-        wp_plugins.output(wpscan_options.verbose,json_report)
+        wp_plugins.output(wpscan_options.verbose)
       else
         puts info('No plugins found')
       end
@@ -542,15 +528,15 @@ def main
     puts critical('-) If you see SSL/TLS related error messages you have to fix your local TLS setup')
     puts critical('-) Windows is still not supported')
     exit(1)
-  rescue => e
-    puts
-    puts critical(e.message)
+  # rescue => e
+  #   puts
+  #   puts critical(e.message)
 
-    if wpscan_options && wpscan_options.verbose
-      puts critical('Trace:')
-      puts critical(e.backtrace.join("\n"))
-    end
-    exit(1)
+  #   if wpscan_options && wpscan_options.verbose
+  #     puts critical('Trace:')
+  #     puts critical(e.backtrace.join("\n"))
+  #   end
+  #   exit(1)
   ensure
     # Ensure a clean abort of Hydra
     # See https://github.com/wpscanteam/wpscan/issues/461#issuecomment-42735615

@@ -4,7 +4,7 @@ class WpItem
   module Output
 
     # @return [ Void ]
-    def output(verbose = false, json_report = nil)
+    def output(verbose = false)
       outdated = VersionCompare.lesser?(version, latest_version) if latest_version
 
       puts
@@ -26,7 +26,7 @@ class WpItem
         puts warning('We could not determine a version so all vulnerabilities are printed out')
       end
 
-      vulnerabilities.output json_report
+      vulnerabilities.output
     end
   end
 end

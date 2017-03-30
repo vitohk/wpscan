@@ -3,9 +3,9 @@
 class Vulnerabilities < Array
   module Output
 
-    def output(verbose = false, json_report = nil)
+    def output(verbose = false)
       self.each do |v|
-        v.output(verbose, json_report)
+        v.output(verbose)
       end
     end
 
